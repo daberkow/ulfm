@@ -1,5 +1,10 @@
 var transferInProgress = false;
 
+Pebble.addEventListener('showConfiguration', function(e) {
+  // Show config page
+  Pebble.openURL('http://daberkow.github.io/ULFM/index.html');
+});
+
 Pebble.addEventListener("ready", function(e) {
   console.log("NetDownload JS Ready");
 });

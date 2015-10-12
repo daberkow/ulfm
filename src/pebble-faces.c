@@ -7,9 +7,9 @@
 
 #define STORED_USER_TOKEN_LOC 10
 
-
 static Window *window;
 static TextLayer *text_layer;
+static Layer *global_layer;
 static GBitmap *current_bmp;
 static GPath *s_minute_arrow;
 static BitmapLayer *lastLogo;
@@ -26,61 +26,60 @@ void show_logo_image(ClickRecognizerRef recognizer, void *context) {
   netdownload_request("http://192.168.1.110/last.pbl.png");
 }
 
-// .update_proc of my_layer:
-static void my_layer_update_proc(Layer *my_layer, GContext* ctx) {
-  // Fill the path:
-  graphics_context_set_fill_color(ctx, GColorBlack);
-  gpath_draw_filled(ctx, s_minute_arrow);
-  // Stroke the path:
-  graphics_context_set_stroke_color(ctx, GColorBlack);
-  //gpath_draw_outline(ctx, s_minute_arrow);
+//Draws the cornered rectangles
+static void drawRounded(Layer *layer, GContext *ctx)
+{
+  GRect dan = layer_get_bounds(layer);
+  //The if is here incase I wantd different colors
+  #ifdef PBL_PLATFORM_BASALT
+    graphics_context_set_fill_color(ctx, GColorWhite);
+    graphics_fill_rect(ctx, dan, 8, GCornersAll);
+  #else
+    graphics_context_set_fill_color(ctx, GColorWhite);
+    graphics_fill_rect(ctx, dan, 8, GCornersAll);
+  #endif
 }
 
-static void my_layer_draw(Layer *layer, GContext *ctx) {
-  GRect bounds = layer_get_bounds(layer);
-
-  // Draw a black filled rectangle with sharp corners
-  graphics_context_set_fill_color(ctx, GColorBlack);
-  graphics_fill_rect(ctx, bounds, 0, GCornerNone);
-
-  // Draw a white filled circle a radius of half the layer height
-  //graphics_context_set_fill_color(ctx, GColorWhite);
-  //const int16_t half_h = bounds.size.h / 2;
-  //graphics_fill_circle(ctx, GPoint(half_h, half_h), half_h);
-}
-
-static void window_load(Window *window) {
+//144, 168
+static void win_load_need_setup(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
 
   #ifdef PBL_PLATFORM_BASALT
     window_set_background_color(window, GColorDarkCandyAppleRed);
     window_stack_push(window, true);
+  #else
+    window_set_background_color(window, GColorBlack);
+    window_stack_push(window, true);
   #endif
 
+  global_layer = layer_create(GRect(22, 20, 100, 60));
+  layer_set_update_proc(global_layer, drawRounded);
+  layer_add_child(window_layer, global_layer);
 
-
-  //lastLogo = bitmap_layer_create(GRect(48, 20, 48, 48));
-  //layer_add_child(window_layer, bitmap_layer_get_layer(lastLogo));
-
-  text_layer = text_layer_create((GRect) { .origin = { 20, 30 }, .size = { 100, 40 } });
+  text_layer = text_layer_create((GRect) { .origin = { 8, 4 }, .size = { 84, 40 } });
   text_layer_set_text(text_layer, "Unoffical");
-  //text_layer_set_font(text_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28));
   text_layer_set_text_alignment(text_layer, GTextAlignmentCenter);
-  layer_add_child(window_layer, text_layer_get_layer(text_layer));
+  layer_add_child(global_layer, text_layer_get_layer(text_layer));
 
-  text_layer = text_layer_create((GRect) { .origin = { 20, 45 }, .size = { 100, 40 } });
+  text_layer = text_layer_create((GRect) { .origin = { 8, 19 }, .size = { 84, 40 } });
   text_layer_set_text(text_layer, "Last.fm");
   text_layer_set_font(text_layer, fonts_get_system_font(FONT_KEY_GOTHIC_28));
   text_layer_set_text_alignment(text_layer, GTextAlignmentCenter);
-  layer_add_child(window_layer, text_layer_get_layer(text_layer));
+  layer_add_child(global_layer, text_layer_get_layer(text_layer));
 
+  global_layer = layer_create(GRect(22, 100, 100, 60));
+  layer_set_update_proc(global_layer, drawRounded);
+  layer_add_child(window_layer, global_layer);
 
-  text_layer = text_layer_create((GRect) { .origin = { 20, 110 }, .size = { 100, 40 } });
-  text_layer_set_text(text_layer, "Go To Settings To Login!");
+  text_layer = text_layer_create((GRect) { .origin = { 8, 0 }, .size = { 84, 60 } });
+  text_layer_set_text(text_layer, "Go To Settings In The Pebble App To Login!");
   text_layer_set_text_alignment(text_layer, GTextAlignmentCenter);
-  layer_add_child(window_layer, text_layer_get_layer(text_layer));
-  current_bmp = NULL;
+  layer_add_child(global_layer, text_layer_get_layer(text_layer));
+}
+
+
+static void win_unload_need_setup(Window *window) {
 }
 
 static void window_unload(Window *window) {
@@ -136,8 +135,8 @@ static void init(void) {
 
   }else{
     window_set_window_handlers(window, (WindowHandlers) {
-      .load = window_load,
-      .unload = window_unload,
+      .load = win_load_need_setup,
+      .unload = win_unload_need_setup,
     });
   }
 
